@@ -5,6 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createHash } from 'crypto';
 
+// 强制动态渲染（防止构建时预渲染成静态 404）
+export const dynamic = 'force-dynamic';
+
 function hashPassword(pwd: string): string {
   return createHash('sha256').update(pwd + '_huaxia_salt_2026').digest('hex');
 }
