@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model City {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  longitude Float
+  latitude  Float
+  level     String   @default("tier2")
+  events    Event[]
+}
+
+model Event {
+  id            String    @id
+  title         String
+  date          String
+  city          String
+  venue         String
+  registration  String    @default("待定")
+  benefits      String    @default("待定")
+  requirements  String    @default("无特殊要求")
+  contact       String    @default("")
+  status        String    @default("pending")
+  reviewReason  String?
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  cityRelation  City      @relation(fields: [city], references: [name])
+  createdAt     DateTime  @default(now())
+}

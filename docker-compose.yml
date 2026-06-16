@@ -1,0 +1,26 @@
+services:
+  app:
+    image: huaxia-ai-event-map:latest
+    container_name: huaxia-event-map
+    ports:
+      - "127.0.0.1:3100:3100"
+    environment:
+      - DATABASE_URL=file:/data/huaxia.db
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - GLM_API_KEY=${GLM_API_KEY:-}
+      - MINICPM_API_KEY=${MINICPM_API_KEY:-}
+      - STEP_API_KEY=${STEP_API_KEY:-}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-}
+      - GLM_BASE_URL=${GLM_BASE_URL:-}
+      - MINICPM_BASE_URL=${MINICPM_BASE_URL:-}
+      - STEP_BASE_URL=${STEP_BASE_URL:-}
+      - AI_REVIEW_PROVIDER=${AI_REVIEW_PROVIDER:-minicpm}
+      - AI_REVIEW_ENABLED=${AI_REVIEW_ENABLED:-true}
+      - AI_REVIEW_TIMEOUT=${AI_REVIEW_TIMEOUT:-10000}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+    volumes:
+      - huaxia-data:/data
+    restart: unless-stopped
+
+volumes:
+  huaxia-data:

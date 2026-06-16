@@ -1,0 +1,158 @@
+'use client';
+// 华夏AI线下活动地图 — 主客户端组件（SWR 数据流）
+import { useState, useCallback } from 'react';
+import useSWR from 'swr';
+import dayjs from 'dayjs';
+import dynamic from 'next/dynamic';
+import Timeline from './Timeline';
+import EventList from './EventList';
+import RegistrationModal from './RegistrationModal';
+import type { EventFormData } from './RegistrationModal';
+import type { AIEvent, CityNode } from '@/lib/types';
+import { fetcher, filterByDateRange } from '@/lib/helpers';
+
+// ECharts 必须跳过 SSR
+const ChinaMap = dynamic(() => import('./ChinaMap'), { ssr: false });
+
+export default function AppClient() {
+  // 时间范围
+  const [startDate, setStartDate] = useState('2026-01-01');
+  const [endDate, setEndDate] = useState('2026-12-31');
+
+  // 选中的城市
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+
+  // 报名弹窗
+  const [showModal, setShowModal] = useState(false);
+
+  // 成功提示
+  const [toast, setToast] = useState<string | null>(null);
+
+  // SWR 获取 approved 活动
+  const { data: eventsData, mutate: mutateEvents } = useSWR('/api/events', fetcher);
+  const { data: citiesData } = useSWR('/api/cities', fetcher);
+
+  const allEvents: AIEvent[] = eventsData?.events ?? [];
+  const cities: CityNode[] = citiesData?.cities ?? [];
+
+  // 用日期筛选
+  const displayEvents = filterByDateRange(allEvents, startDate, endDate)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // 日期范围变化
+  const handleDateRangeChange = useCallback((start: string, end: string) => {
+    setStartDate(start);
+    setEndDate(end);
+  }, []);
+
+  // 点击城市
+  const handleCityClick = useCallback((cityName: string) => {
+    setSelectedCity(cityName === selectedCity ? null : cityName);
+  }, [selectedCity]);
+
+  // 提交活动 → POST API
+  const handleSubmitEvent = useCallback(async (formData: EventFormData) => {
+    try {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        mutateEvents();
+        setShowModal(false);
+        if (data.event?.status === 'approved') {
+          setToast(`✅ 活动「${formData.title}」已通过审核！`);
+        } else {
+          setToast(`⏳ 活动「${formData.title}」已提交，正在审核中...`);
+        }
+        setTimeout(() => setToast(null), 4000);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`提交失败: ${err.error || res.statusText}`);
+      }
+    } catch {
+      alert('网络错误，请稍后重试');
+    }
+  }, [mutateEvents]);
+
+  // 城市筛选
+  const cityFilteredEvents = selectedCity
+    ? displayEvents.filter((e) => e.city === selectedCity)
+    : displayEvents;
+
+  // 统计
+  const totalEvents = displayEvents.length;
+  const totalCities = new Set(displayEvents.map((e) => e.city)).size;
+  const upcomingEvents = displayEvents.filter((e) => dayjs(e.date).isAfter(dayjs())).length;
+
+  return (
+    <div className="app-container">
+      {/* 顶部标题栏 */}
+      <header className="app-header">
+        <div>
+          <div className="app-title">华夏AI线下活动地图</div>
+          <div className="app-subtitle">HUAXIA AI OFFLINE EVENT MAP</div>
+        </div>
+        <div className="header-stats">
+          <div className="stat-item">
+            <div className="stat-value">{totalEvents}</div>
+            <div className="stat-label">活动总数</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{totalCities}</div>
+            <div className="stat-label">覆盖城市</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">{upcomingEvents}</div>
+            <div className="stat-label">即将举办</div>
+          </div>
+        </div>
+        <div className="header-actions">
+          {selectedCity && (
+            <button
+              className="btn-secondary"
+              style={{ fontSize: 12, padding: '6px 12px' }}
+              onClick={() => setSelectedCity(null)}
+            >
+              ✕ 清除城市筛选: {selectedCity}
+            </button>
+          )}
+          <button className="btn-add-event" onClick={() => setShowModal(true)}>
+            ＋ 提交活动
+          </button>
+        </div>
+      </header>
+
+      {/* 主内容区域 */}
+      <main className="app-main">
+        <ChinaMap
+          startDate={startDate}
+          endDate={endDate}
+          onCityClick={handleCityClick}
+          events={displayEvents}
+          cities={cities}
+        />
+
+        <div className="side-panel">
+          <Timeline
+            startDate={startDate}
+            endDate={endDate}
+            onDateRangeChange={handleDateRangeChange}
+          />
+          <EventList events={cityFilteredEvents} />
+        </div>
+      </main>
+
+      <RegistrationModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSubmit={handleSubmitEvent}
+        cities={cities}
+      />
+
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
