@@ -1,16 +1,9 @@
-// GET/PUT /api/admin/review-config — 审核配置
+// GET /api/admin/review-config — 审核配置
 import { NextRequest, NextResponse } from 'next/server';
-
-function checkAuth(request: NextRequest): NextResponse | null {
-  const auth = request.headers.get('authorization');
-  const password = process.env.ADMIN_PASSWORD;
-  if (!password) return NextResponse.json({ error: '未配置 ADMIN_PASSWORD' }, { status: 500 });
-  if (auth !== `Bearer ${password}`) return NextResponse.json({ error: '认证失败' }, { status: 401 });
-  return null;
-}
+import { checkAuth } from '@/lib/admin-auth';
 
 export async function GET(request: NextRequest) {
-  const authErr = checkAuth(request);
+  const authErr = await checkAuth(request);
   if (authErr) return authErr;
 
   return NextResponse.json({
