@@ -31,6 +31,8 @@ export default function AppClient() {
   // SWR 获取 approved 活动
   const { data: eventsData, mutate: mutateEvents } = useSWR('/api/events', fetcher);
   const { data: citiesData } = useSWR('/api/cities', fetcher);
+  // 运营横幅（由环境变量 SITE_BANNER 控制，开源部署默认为空）
+  const { data: siteConfig } = useSWR('/api/site-config', fetcher);
 
   const allEvents: AIEvent[] = eventsData?.events ?? [];
   const cities: CityNode[] = citiesData?.cities ?? [];
@@ -89,6 +91,13 @@ export default function AppClient() {
 
   return (
     <div className="app-container">
+      {/* 顶部运营横幅（由环境变量 SITE_BANNER 控制，开源部署默认不显示） */}
+      {siteConfig?.banner && (
+        <div className="promo-banner">
+          <span className="promo-icon">📣</span>
+          {siteConfig.banner}
+        </div>
+      )}
       {/* 顶部标题栏 */}
       <header className="app-header">
         <div>

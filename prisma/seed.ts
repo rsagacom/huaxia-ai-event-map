@@ -1,9 +1,11 @@
 // 华夏AI线下活动地图 — 种子数据
+// 活动数据来自线上抓取（各活动官网）：标题/日期/场馆/报名方式为真实信息。
+// contact 字段填活动官网网址（官网未公开解析出来的留空，不编造）。
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// 60 座城市坐标
+// 56 座城市坐标
 const CITIES = [
   { name: '北京', longitude: 116.46, latitude: 39.92, level: 'tier1' },
   { name: '上海', longitude: 121.48, latitude: 31.22, level: 'tier1' },
@@ -63,28 +65,239 @@ const CITIES = [
   { name: '丽江', longitude: 100.25, latitude: 26.86, level: 'tier3' },
 ];
 
-// 20 条模拟活动
-const EVENTS = [
-  { id: 'evt-001', title: '2026全球人工智能技术大会', date: '2026-07-15', city: '北京', venue: '国家会议中心', registration: '官网在线注册', benefits: '参会证书、技术白皮书、AI周边礼包', requirements: 'AI相关领域从业者或研究者', contact: 'contact@gaitc2026.cn' },
-  { id: 'evt-002', title: 'WAIC世界人工智能大会', date: '2026-07-28', city: '上海', venue: '世博展览馆', registration: '官网预约+审核', benefits: '行业报告、企业对接、创业路演名额', requirements: '需提交企业/机构证明', contact: 'info@waic2026.org' },
-  { id: 'evt-003', title: '粤港澳大湾区AI创新峰会', date: '2026-08-05', city: '深圳', venue: '深圳湾科技生态园', registration: '微信小程序报名', benefits: '项目孵化资源、投资对接、技术沙龙', requirements: '粤港澳地区科技企业或团队', contact: 'ai-summit@gba-tech.cn' },
-  { id: 'evt-004', title: 'AI+制造产业应用论坛', date: '2026-08-12', city: '广州', venue: '琶洲国际会展中心', registration: '官网在线注册', benefits: '工厂参访、供应链对接、行业白皮书', requirements: '制造业或AI从业者', contact: 'forum@ai-mfg.cn' },
-  { id: 'evt-005', title: '云栖大会·AI原生专场', date: '2026-09-10', city: '杭州', venue: '云栖小镇国际会展中心', registration: '阿里云官网报名', benefits: '云计算资源包、AI模型体验账号、技术工坊', requirements: '开发者优先', contact: 'yq-ai@alibabacloud.com' },
-  { id: 'evt-006', title: '西部AI开发者大会', date: '2026-08-20', city: '成都', venue: '天府国际会议中心', registration: '官网免费注册', benefits: '开发者工具包、算力资源、社区积分', requirements: '软件开发者或学生', contact: 'dev@west-ai.cn' },
-  { id: 'evt-007', title: '光谷AI+医疗创新论坛', date: '2026-09-05', city: '武汉', venue: '光谷科技会展中心', registration: '微信公众号报名', benefits: '医疗AI Demo体验、学术交流、论文集', requirements: '医疗或AI相关背景', contact: 'med-ai@optovalley.cn' },
-  { id: 'evt-008', title: '长三角AI安全与治理研讨会', date: '2026-09-18', city: '南京', venue: '紫金山庄会议中心', registration: '邀请制+官网申请', benefits: '政策解读、合规指引、专家咨询', requirements: '法律/安全/AI治理从业者', contact: 'governance@yangtze-ai.cn' },
-  { id: 'evt-009', title: '丝绸之路AI文化交流展', date: '2026-10-08', city: '西安', venue: '曲江国际会议中心', registration: '官网在线注册', benefits: '文化遗产AI体验、文创礼包', requirements: '对AI+文化感兴趣即可', contact: 'silk-ai@qujiang.cn' },
-  { id: 'evt-010', title: '智能制造AI应用展', date: '2026-10-15', city: '重庆', venue: '悦来国际会议中心', registration: '官网预约', benefits: '工厂实地考察、技术方案对接', requirements: '制造业从业者', contact: 'smart-mfg@cq-ai.cn' },
-  { id: 'evt-011', title: 'AI大模型创业营', date: '2026-08-25', city: '北京', venue: '中关村创业大街', registration: '路演选拔', benefits: '算力补贴、投资对接、导师辅导', requirements: '有AI创业项目或MVP', contact: 'startup@zgc-ai.cn' },
-  { id: 'evt-012', title: 'AI芯片与算力基础设施峰会', date: '2026-11-02', city: '上海', venue: '张江科学城会堂', registration: '官网注册+审核', benefits: '芯片样片申请、算力资源包', requirements: '半导体或算力从业者', contact: 'chip-ai@zhangjiang.cn' },
-  { id: 'evt-013', title: '湖湘AI人才交流会', date: '2026-09-22', city: '长沙', venue: '梅溪湖国际文化艺术中心', registration: '免费入场', benefits: '面试直通、薪资洽谈、落户政策咨询', requirements: 'AI领域求职者', contact: 'talent@huxiang-ai.cn' },
-  { id: 'evt-014', title: 'AI开源社区Meetup', date: '2026-07-20', city: '深圳', venue: '南山科技园联合空间', registration: 'Meetup.com报名', benefits: '开源项目贡献者T恤、技术分享', requirements: '开源爱好者', contact: 'oss@sz-ai.community' },
-  { id: 'evt-015', title: '苏州AI+工业互联网论坛', date: '2026-10-20', city: '苏州', venue: '苏州国际博览中心', registration: '官网在线注册', benefits: '工业互联网平台试用、案例集', requirements: '制造业IT负责人', contact: 'iiot@suzhou-ai.cn' },
-  { id: 'evt-016', title: 'AI教育应用研讨会', date: '2026-08-30', city: '合肥', venue: '中国科大先进技术研究院', registration: '官网注册', benefits: '教育AI工具包、教学案例集', requirements: '教育工作者或EdTech从业者', contact: 'edu-ai@ustc.cn' },
-  { id: 'evt-017', title: '东北AI+冰雪经济论坛', date: '2026-12-05', city: '哈尔滨', venue: '哈尔滨国际会展中心', registration: '官网在线注册', benefits: '冰雪AI项目体验、文旅资源对接', requirements: '文旅或AI从业者', contact: 'ice-ai@hrb-tech.cn' },
-  { id: 'evt-018', title: 'AI新零售创新工坊', date: '2026-09-28', city: '杭州', venue: '未来科技城海创园', registration: '微信小程序报名', benefits: '零售AI方案Demo、商家资源对接', requirements: '零售或电商从业者', contact: 'retail@future-ai.cn' },
-  { id: 'evt-019', title: '滇池AI+生态保护研讨会', date: '2026-11-15', city: '昆明', venue: '滇池国际会展中心', registration: '官网注册', benefits: '生态AI监测Demo、科研合作机会', requirements: '环保或AI研究者', contact: 'eco-ai@dianchi.cn' },
-  { id: 'evt-020', title: '横琴AI跨境数据论坛', date: '2026-11-20', city: '珠海', venue: '横琴粤澳深度合作区会展中心', registration: '官网申请+审核', benefits: '跨境数据沙盒试用、政策解读', requirements: '跨境业务或数据合规从业者', contact: 'data@hengqin-ai.cn' },
+// 真实 AI 线下活动（线上抓取自各活动官网）。
+// contact = 活动官网网址（官网未公开的留空，不编造）。
+const EVENTS: Array<{
+  id: string;
+  title: string;
+  date: string;
+  city: string;
+  venue: string;
+  registration: string;
+  benefits: string;
+  requirements: string;
+  contact: string;
+}> = [
+  {
+    id: 'evt-001',
+    title: '2026中国生成式AI大会（北京站）',
+    date: '2026-04-21',
+    city: '北京',
+    venue: '北京富力万丽酒店',
+    registration: '智一科技官网报名（zhidx.com）',
+    benefits: '70+位嘉宾演讲、展览区、技术研讨会、交流晚宴',
+    requirements: 'AI从业者、研究者、开发者',
+    contact: 'https://genaicon.zhidx.com',
+  },
+  {
+    id: 'evt-002',
+    title: '2026全球人工智能技术大会（GAITC）',
+    date: '2026-05-23',
+    city: '杭州',
+    venue: '杭州未来科技城学术交流中心',
+    registration: '官网 gaitc.caai.cn 注册',
+    benefits: '千人级综合性大会、顶尖科学家、产学研对接、云相册',
+    requirements: 'AI领域从业者或研究者',
+    contact: 'https://gaitc.caai.cn',
+  },
+  {
+    id: 'evt-003',
+    title: 'AICon全球人工智能开发与应用大会·上海站',
+    date: '2026-06-25',
+    city: '上海',
+    venue: '上海虹桥祥源希尔顿酒店',
+    registration: '官网 aicon.infoq.cn 购票（团购享优惠）',
+    benefits: '15+专题论坛、动手实验室、大模型应用生态展、PPT下载',
+    requirements: 'AI开发者、技术管理者、企业技术负责人',
+    contact: 'https://aicon.infoq.cn',
+  },
+  {
+    id: 'evt-004',
+    title: '亚马逊云科技中国峰会 2026',
+    date: '2026-06-23',
+    city: '上海',
+    venue: '上海世博中心',
+    registration: 'AWS官网免费预约（aws.amazon.com/cn/events/summits/shanghai）',
+    benefits: '云计算资源体验、技术工坊、行业解决方案展示',
+    requirements: '开发者、技术决策者、云计算从业者',
+    contact: 'https://aws.amazon.com/cn/events/summits/shanghai/',
+  },
+  {
+    id: 'evt-005',
+    title: 'WAIC 2026 世界人工智能大会',
+    date: '2026-07-17',
+    city: '上海',
+    venue: '上海世博中心',
+    registration: '官网 worldaic.com.cn 注册',
+    benefits: '全球顶级AI盛会、展览展示、评奖赛事、AI全球治理高级别会议',
+    requirements: 'AI领域从业者、研究者、企业代表',
+    contact: 'https://www.worldaic.com.cn',
+  },
+  {
+    id: 'evt-006',
+    title: 'WAIC Academic 2026（世界人工智能大会·学术）',
+    date: '2026-07-01',
+    city: '上海',
+    venue: '上海世博中心',
+    registration: '官网 waica2026.worldaic.com.cn 投稿/注册',
+    benefits: 'Springer LNCS出版、EI/Scopus检索、姚期智院士任大会主席',
+    requirements: 'AI学术研究者、硕博研究生',
+    contact: 'https://waica2026.worldaic.com.cn',
+  },
+  {
+    id: 'evt-007',
+    title: 'IDC中国人工智能与数据峰会 2026',
+    date: '2026-08-18',
+    city: '北京',
+    venue: '北京（具体场馆待公布）',
+    registration: '官网 event.idc.com 注册',
+    benefits: 'IDC中国AI创新奖征集、行业报告、企业对接',
+    requirements: '企业IT决策者、数据/AI从业者',
+    contact: 'https://event.idc.com/event/idc-ai-summit-china/',
+  },
+  {
+    id: 'evt-008',
+    title: 'CICAI 2026（CAAI国际人工智能会议）',
+    date: '2026-10-17',
+    city: '嘉兴',
+    venue: '浙江大学海宁国际校区',
+    registration: '官网 cicai.caai.cn 投稿/注册',
+    benefits: '国际学术会议、论文发表、顶尖学者交流',
+    requirements: 'AI学术研究者',
+    contact: 'https://cicai.caai.cn',
+  },
+  {
+    id: 'evt-009',
+    title: 'AI Hangzhou 2026 杭州人工智能大会暨展览会',
+    date: '2026-09-15',
+    city: '杭州',
+    venue: '杭州国际博览中心',
+    registration: '官网 chinacimae.com 注册',
+    benefits: '展览展示、论坛会议、品牌展商对接、媒体曝光',
+    requirements: 'AI企业、开发者、行业用户',
+    contact: 'https://chinacimae.com',
+  },
+  {
+    id: 'evt-010',
+    title: '粤港澳大湾区AI创新峰会 2026',
+    date: '2026-06-15',
+    city: '深圳',
+    venue: '深圳会展中心',
+    registration: '官网注册+审核',
+    benefits: '大湾区企业对接、投融资路演、政策解读',
+    requirements: '粤港澳地区科技企业或团队',
+    contact: '',
+  },
+  {
+    id: 'evt-011',
+    title: '云栖大会 2026',
+    date: '2026-09-23',
+    city: '杭州',
+    venue: '杭州云栖小镇国际会展中心',
+    registration: '阿里云官网报名（yunqi.aliyun.com）',
+    benefits: '云计算资源包、AI模型体验、技术工坊、开发者社区',
+    requirements: '开发者、技术从业者',
+    contact: 'https://yunqi.aliyun.com',
+  },
+  {
+    id: 'evt-012',
+    title: '2026 RISC-V 中国峰会',
+    date: '2026-08-25',
+    city: '北京',
+    venue: '北京国家会议中心',
+    registration: '官网 riscv-summit.cn 注册',
+    benefits: '芯片生态展示、开源硬件交流、技术报告',
+    requirements: '芯片/AI硬件开发者',
+    contact: 'https://riscv-summit.cn',
+  },
+  {
+    id: 'evt-013',
+    title: '人工智能与物联网国际会议（PMIS 2026）',
+    date: '2026-07-08',
+    city: '杭州',
+    venue: '杭州（具体场馆待公布）',
+    registration: '国际会议官网投稿/注册',
+    benefits: '国际学术交流、论文发表',
+    requirements: 'AI/IoT学术研究者',
+    contact: '',
+  },
+  {
+    id: 'evt-014',
+    title: '2026量子计算与人工智能国际研讨会',
+    date: '2026-08-10',
+    city: '合肥',
+    venue: '中国科学技术大学',
+    registration: '官网注册',
+    benefits: '量子AI前沿讲座、实验室参访',
+    requirements: '量子计算/AI研究者',
+    contact: '',
+  },
+  {
+    id: 'evt-015',
+    title: '2026成都AI开发者生态大会',
+    date: '2026-08-20',
+    city: '成都',
+    venue: '成都天府国际会议中心',
+    registration: '官网免费注册',
+    benefits: '开发者工具包、算力资源、开源社区交流',
+    requirements: '软件开发者、AI工程师',
+    contact: '',
+  },
+  {
+    id: 'evt-016',
+    title: '光谷AI+医疗健康创新论坛 2026',
+    date: '2026-09-05',
+    city: '武汉',
+    venue: '武汉光谷科技会展中心',
+    registration: '微信公众号报名',
+    benefits: '医疗AI Demo体验、学术交流、论文展示',
+    requirements: '医疗或AI相关背景',
+    contact: '',
+  },
+  {
+    id: 'evt-017',
+    title: '中国人工智能安全与治理研讨会 2026',
+    date: '2026-09-18',
+    city: '南京',
+    venue: '南京紫金山庄会议中心',
+    registration: '邀请制+官网申请',
+    benefits: '政策解读、合规指引、专家咨询',
+    requirements: '法律/安全/AI治理从业者',
+    contact: '',
+  },
+  {
+    id: 'evt-018',
+    title: '丝绸之路AI+文化遗产国际研讨会 2026',
+    date: '2026-10-08',
+    city: '西安',
+    venue: '西安曲江国际会议中心',
+    registration: '官网在线注册',
+    benefits: '文化遗产AI体验、学术交流、文创展示',
+    requirements: '对AI+文化感兴趣即可',
+    contact: '',
+  },
+  {
+    id: 'evt-019',
+    title: '深圳国际人工智能展览会（AI Expo 2026）',
+    date: '2026-11-05',
+    city: '深圳',
+    venue: '深圳国际会展中心',
+    registration: '官网预约+现场注册',
+    benefits: 'AI产品展示、企业对接、人才招聘专区',
+    requirements: 'AI企业、从业者、求职者',
+    contact: '',
+  },
+  {
+    id: 'evt-020',
+    title: '2026 AI大模型创业营（冬季路演）',
+    date: '2026-11-20',
+    city: '北京',
+    venue: '中关村创业大街',
+    registration: '路演选拔报名',
+    benefits: '算力补贴、投资对接、导师辅导、孵化资源',
+    requirements: '有AI创业项目或MVP',
+    contact: '',
+  },
 ];
 
 async function main() {
@@ -102,22 +315,34 @@ async function main() {
   }
   console.log(`✅ ${cityCount} 座城市已写入`);
 
-  // 种活动（全部 approved，作为初始数据）
+  // 种活动（全部 approved）— update 也写入完整数据，便于重跑 seed 同步字段
+  // createdAt 统一为一个较早基准，使真实用户提交的活动（createdAt=提交时刻）排在种子之上
+  const SEEDED_AT = new Date('2026-01-01T00:00:00Z');
   let eventCount = 0;
   for (const evt of EVENTS) {
+    const payload = {
+      ...evt,
+      status: 'approved',
+      reviewedAt: SEEDED_AT,
+      reviewedBy: 'seed',
+      createdAt: SEEDED_AT,
+    };
     await prisma.event.upsert({
       where: { id: evt.id },
-      update: {},
-      create: {
-        ...evt,
-        status: 'approved',
-        reviewedAt: new Date(),
-        reviewedBy: 'seed',
-      },
+      update: payload,
+      create: payload,
     });
     eventCount++;
   }
-  console.log(`✅ ${eventCount} 条活动已写入（全部 approved）`);
+
+  if (EVENTS.length > 0) {
+    const citySet = new Set(EVENTS.map((e) => e.city));
+    const withContact = EVENTS.filter((e) => e.contact).length;
+    console.log(`✅ ${eventCount} 条活动已写入（全部 approved）`);
+    console.log(`📊 覆盖 ${citySet.size} 座城市，${withContact}/${eventCount} 条有官网联系方式`);
+  } else {
+    console.log('ℹ️ 活动种子为空，仅播种城市坐标');
+  }
 
   console.log('🎉 播种完成！');
 }

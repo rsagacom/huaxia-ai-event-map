@@ -13,6 +13,8 @@ export interface AIEvent {
   status: string;
   reviewReason?: string | null;
   reviewedBy?: string | null;
+  createdAt?: string;
+  reviewedAt?: string | null;
 }
 
 export interface CityNode {

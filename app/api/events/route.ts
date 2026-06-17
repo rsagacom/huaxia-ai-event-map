@@ -22,9 +22,10 @@ export async function GET(request: NextRequest) {
     where.date = dateFilter;
   }
 
+  // 按发布时间（createdAt）从新到旧；同发布时间的近期举办在上
   const events = await prisma.event.findMany({
     where,
-    orderBy: { date: 'asc' },
+    orderBy: [{ createdAt: 'desc' }, { date: 'desc' }],
     take: 200,
   });
 
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     const id = `evt-${Date.now()}`;
 
     // AI 审核
-    const review = await reviewEvent({ title, date, city, venue, registration, benefits, requirements });
+    const review = await reviewEvent({ title, date, city, venue, registration, benefits, requirements, contact });
     const status = review.approved ? 'approved' : 'rejected';
 
     const event = await prisma.event.create({

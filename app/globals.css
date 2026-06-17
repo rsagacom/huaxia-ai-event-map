@@ -380,7 +380,7 @@ body {
 }
 
 .event-card-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 8px;
@@ -407,29 +407,131 @@ body {
   opacity: 0.7;
 }
 
-.event-card-benefits {
-  font-size: 11px;
-  color: var(--accent-green);
-  margin-top: 4px;
-  padding-top: 6px;
+/* 卡片头部：标题 + 展开/收起箭头 */
+.event-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.event-card-arrow {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--accent-cyan);
+  line-height: 1.4;
+}
+
+/* 展开后的详情区 */
+.event-card-detail {
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid rgba(30, 58, 95, 0.5);
 }
 
-.event-card-requirements {
-  font-size: 11px;
-  color: var(--accent-orange);
-  margin-top: 4px;
+/* 详情字段：label + value 一行，字体放大，长链接完整换行 */
+.event-card-field {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
-.event-card-registration {
-  display: inline-block;
-  margin-top: 8px;
+.field-label {
+  flex-shrink: 0;
+  color: var(--accent-cyan);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.field-value {
+  color: var(--text-primary);
+  word-break: break-word;
+  min-width: 0;
+}
+
+/* 字段中的网址链接：可点击、新标签打开 */
+.field-link {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+  cursor: pointer;
+}
+
+.field-link:hover {
+  color: #ffffff;
+}
+
+/* 顶部运营横幅（由环境变量 SITE_BANNER 控制，开源默认不显示） */
+.promo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.18), rgba(124, 77, 255, 0.18), rgba(0, 230, 118, 0.18));
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-radius: 8px;
+  padding: 11px 18px;
+  margin-bottom: 14px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #eaf9ff;
+  letter-spacing: 0.3px;
+  line-height: 1.5;
+  box-shadow: 0 0 22px rgba(0, 229, 255, 0.18);
+  animation: bannerGlow 3s ease-in-out infinite;
+}
+
+.promo-banner .promo-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+@keyframes bannerGlow {
+  0%, 100% { box-shadow: 0 0 18px rgba(0, 229, 255, 0.15); }
+  50% { box-shadow: 0 0 28px rgba(0, 229, 255, 0.32); }
+}
+
+/* 一键复制全部信息按钮：全宽、醒目 */
+.copy-all-btn {
+  display: block;
+  width: 100%;
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-all-btn:hover {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: var(--accent-cyan);
+}
+
+.copy-all-btn.copied {
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+  background: rgba(0, 230, 118, 0.12);
+}
+
+/* 收起态的「展开详情」提示 */
+.event-card-toggle {
+  margin-top: 6px;
   font-size: 11px;
   color: var(--accent-cyan);
-  background: rgba(0, 229, 255, 0.08);
-  padding: 3px 8px;
-  border-radius: 3px;
-  border: 1px solid rgba(0, 229, 255, 0.2);
+  text-align: right;
+  opacity: 0.85;
 }
 
 /* 报名弹窗 */
