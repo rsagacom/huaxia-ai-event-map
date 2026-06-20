@@ -19,6 +19,10 @@ export default function ChinaMap({ onCityClick, events, cities }: ChinaMapProps)
   const mapRegistered = useRef(false);
   const [loading, setLoading] = useState(true);
 
+  // 移动端 roam 改只缩放不平移，让单指滑动穿透到页面滚动
+  const isMobile = () =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches;
+
   useEffect(() => {
     if (!chartRef.current) return;
 
@@ -38,7 +42,11 @@ export default function ChinaMap({ onCityClick, events, cities }: ChinaMapProps)
         setLoading(false);
       });
 
-    const handleResize = () => chart.resize();
+    const handleResize = () => {
+      chart.resize();
+      // 横竖屏/窗口跨越 1024px 断点时，roam 模式需随之切换重绘
+      if (mapRegistered.current) updateChart(chart);
+    };
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -94,8 +102,8 @@ export default function ChinaMap({ onCityClick, events, cities }: ChinaMapProps)
       },
       geo: {
         map: 'china',
-        roam: true,
-        zoom: 1.2,
+        roam: isMobile() ? 'scale' : true,
+        zoom: isMobile() ? 1.1 : 1.2,
         center: [104.5, 36],
         label: { show: false },
         emphasis: {

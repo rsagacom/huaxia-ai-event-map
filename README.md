@@ -29,9 +29,14 @@
 
 ### 📝 在线提交活动 | Submit Event
 - 点击「＋ 提交活动」打开表单弹窗
-- 必填字段：活动主题、时间、城市、场馆
+- 必填字段：活动主题、时间（精确到时分）、城市、详细地址
 - 可选字段：报名方式、活动福利、参加要求、联系方式
 - 提交后实时更新地图和列表
+
+### 🤖 智能识别填表 | AI Auto-Fill
+- 提交活动时支持**上传活动海报图片**或**粘贴活动文本**
+- AI 自动识别并填入：主题、时间（精确到时分）、城市、详细地址、报名方式等
+- 多模态识别（MiniCPM-V）+ 多 Provider 降级，识别结果可手动修改后再提交
 
 ### 🤖 AI 智能审核 | AI Content Review
 - 用户提交的活动自动经过 AI 审核才显示
@@ -135,6 +140,8 @@ docker compose --env-file .env.production up -d
 | `STEP_API_KEY` | | | 阶跃 Step API Key |
 | `*_BASE_URL` | | | 端侧模型覆盖（如 `MINICPM_BASE_URL=http://localhost:11434/v1`） |
 | `ADMIN_PASSWORD` | | | 审核后台密码（不设则无法登录） |
+| `SITE_BANNER` | | | 顶部运营公告文案（开源默认空，不显示） |
+| `SITE_WECHAT_ID` | | | 公告中渲染为「点击复制」胶囊的微信号 |
 
 ---
 
@@ -182,6 +189,17 @@ docker compose --env-file .env.production up -d
 3. 提交更改：`git commit -m 'Add some feature'`
 4. 推送分支：`git push origin feature/your-feature`
 5. 提交 Pull Request
+
+---
+
+## 📝 更新日志 | Changelog
+
+### 2026-06-20
+- **活动时间精确到时分**：表单改用 `datetime-local` 输入，AI 识别具体开始时刻，列表展示「YYYY年M月D日 HH:mm」
+- **智能识别填表修复**：海报无年份的日期自动补全年份；模型误拆到 `time` 字段的时间合并回 `date`；禁止 AI 用「未提供」等占位词污染字段
+- **「场馆」字段升级为「详细地址」**：支持只公布到区/路级的活动（如「深圳市罗湖区」），更通用
+- **UI 优化**：顶部运营公告与微信号胶囊字号整体缩小一号
+- 新增 `POST /api/extract-event` 多模态智能识别接口（海报图片 / 文本 → 自动填表）
 
 ---
 

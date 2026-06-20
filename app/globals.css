@@ -476,10 +476,10 @@ body {
   background: linear-gradient(90deg, rgba(0, 229, 255, 0.18), rgba(124, 77, 255, 0.18), rgba(0, 230, 118, 0.18));
   border: 1px solid rgba(0, 229, 255, 0.45);
   border-radius: 8px;
-  padding: 11px 18px;
-  margin-bottom: 14px;
+  padding: 7px 14px;
+  margin-bottom: 12px;
   text-align: center;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: #eaf9ff;
   letter-spacing: 0.3px;
@@ -489,7 +489,7 @@ body {
 }
 
 .promo-banner .promo-icon {
-  font-size: 16px;
+  font-size: 13px;
   flex-shrink: 0;
 }
 
@@ -497,6 +497,28 @@ body {
   0%, 100% { box-shadow: 0 0 18px rgba(0, 229, 255, 0.15); }
   50% { box-shadow: 0 0 28px rgba(0, 229, 255, 0.32); }
 }
+
+/* 横幅内群主微信号胶囊：点击即复制 */
+.promo-wechat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0 3px;
+  padding: 0 7px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #061018;
+  background: linear-gradient(90deg, #00e5ff, #7c4dff);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  line-height: 1.5;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+.promo-wechat:hover { filter: brightness(1.14); }
+.promo-wechat:active { transform: scale(0.95); }
+.promo-wechat-copy { font-size: 9px; }
 
 /* 一键复制全部信息按钮：全宽、醒目 */
 .copy-all-btn {
@@ -790,21 +812,245 @@ body {
   gap: 12px;
 }
 
-/* 响应式 */
+/* 响应式 — 移动端解除 100vh/overflow 锁死，页面自然滚动 */
 @media (max-width: 1024px) {
+  .app-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .app-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .app-title {
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+
+  .header-stats {
+    gap: 14px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
   .app-main {
     grid-template-columns: 1fr;
     grid-template-rows: auto;
+    overflow: visible;
   }
 
   .map-section {
-    min-height: 400px;
+    height: 55vh;
+    min-height: 320px;
+  }
+
+  .map-container {
+    /* 允许垂直手势穿透到页面，ECharts canvas 不再独占触摸导致滚不动 */
+    touch-action: pan-y;
+    min-height: 320px;
   }
 
   .side-panel {
     border-left: none;
     border-top: 1px solid var(--border-glow);
+    overflow: visible;
   }
+
+  .events-section {
+    overflow-y: visible;
+  }
+
+  /* 移动端「提交活动」按钮缩小约一半，节省顶栏空间 */
+  .btn-add-event {
+    padding: 4px 8px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    gap: 4px;
+  }
+}
+
+/* 智能识别面板（图片上传 + 粘贴文本 → 自动填表） */
+.extract-panel {
+  background: rgba(124, 77, 255, 0.06);
+  border: 1px dashed rgba(124, 77, 255, 0.45);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.extract-panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-purple);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.extract-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.extract-tab {
+  background: var(--bg-card);
+  border: 1px solid var(--border-glow);
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.extract-tab.active {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+  background: rgba(124, 77, 255, 0.1);
+}
+
+.extract-file-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-glow);
+  color: var(--text-secondary);
+  padding: 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  text-align: center;
+}
+
+.extract-file-label:hover {
+  border-color: var(--accent-purple);
+  color: var(--accent-purple);
+}
+
+.extract-file-input {
+  display: none;
+}
+
+.extract-preview {
+  margin-top: 10px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border-glow);
+  position: relative;
+}
+
+.extract-preview img {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+}
+
+.extract-preview-clear {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  border: none;
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.extract-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.extract-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-extract {
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-extract:hover:not(:disabled) {
+  box-shadow: 0 0 16px rgba(124, 77, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-extract:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.extract-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.extract-status.error {
+  color: #ff5252;
+}
+
+.extract-status.ok {
+  color: var(--accent-green);
+}
+
+/* 自动审核结果提示（rejected 时在表单内展示原因，供用户修改后重提） */
+.review-result {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  animation: fadeInUp 0.3s ease;
+}
+.review-result.review-rejected {
+  background: rgba(255, 82, 82, 0.08);
+  border: 1px solid rgba(255, 82, 82, 0.45);
+}
+.review-result-title {
+  font-weight: 600;
+  color: #ff7a7a;
+  margin-bottom: 6px;
+}
+.review-result-reason {
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+.review-result-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  opacity: 0.85;
 }
 
 /* 成功提示 */

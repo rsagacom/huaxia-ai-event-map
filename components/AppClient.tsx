@@ -7,8 +7,7 @@ import dynamic from 'next/dynamic';
 import Timeline from './Timeline';
 import EventList from './EventList';
 import RegistrationModal from './RegistrationModal';
-import type { EventFormData } from './RegistrationModal';
-import type { AIEvent, CityNode } from '@/lib/types';
+import type { AIEvent, CityNode, EventFormData } from '@/lib/types';
 import { fetcher, filterByDateRange } from '@/lib/helpers';
 
 // ECharts 必须跳过 SSR
@@ -32,7 +31,8 @@ export default function AppClient() {
   const { data: eventsData, mutate: mutateEvents } = useSWR('/api/events', fetcher);
   const { data: citiesData } = useSWR('/api/cities', fetcher);
   // 运营横幅（由环境变量 SITE_BANNER 控制，开源部署默认为空）
-  const { data: siteConfig } = useSWR('/api/site-config', fetcher);
+  // wechatId（SITE_WECHAT_ID）非空时，banner 中出现的该微信号会渲染为可点击复制胶囊
+  const { data: siteConfig } = useSWR<{ banner?: string; wechatId?: string }>('/api/site-config', fetcher);
 
   const allEvents: AIEvent[] = eventsData?.events ?? [];
   const cities: CityNode[] = citiesData?.cities ?? [];
@@ -53,7 +53,7 @@ export default function AppClient() {
   }, [selectedCity]);
 
   // 提交活动 → POST API
-  const handleSubmitEvent = useCallback(async (formData: EventFormData) => {
+  const handleSubmitEvent = useCallback(async (formData: EventFormData): Promise<{ status: string; reason?: string }> => {
     try {
       const res = await fetch('/api/events', {
         method: 'POST',
@@ -62,20 +62,27 @@ export default function AppClient() {
       });
       if (res.ok) {
         const data = await res.json();
+        const status: string = data.event?.status || 'pending';
+        const reason: string | undefined = data.event?.reviewReason;
         mutateEvents();
-        setShowModal(false);
-        if (data.event?.status === 'approved') {
-          setToast(`✅ 活动「${formData.title}」已通过审核！`);
+        if (status === 'approved') {
+          setShowModal(false);
+          setToast(`✅ 活动「${formData.title}」已通过自动审核`);
+          setTimeout(() => setToast(null), 4000);
         } else {
-          setToast(`⏳ 活动「${formData.title}」已提交，正在审核中...`);
+          // rejected：不关弹窗，交由 RegistrationModal 展示原因；这里仅轻提示
+          setToast(`⚠️ 活动「${formData.title}」未通过自动审核，已转人工复核`);
+          setTimeout(() => setToast(null), 5000);
         }
-        setTimeout(() => setToast(null), 4000);
+        return { status, reason };
       } else {
         const err = await res.json().catch(() => ({}));
         alert(`提交失败: ${err.error || res.statusText}`);
+        return { status: 'error', reason: err.error || res.statusText };
       }
     } catch {
       alert('网络错误，请稍后重试');
+      return { status: 'error', reason: '网络错误' };
     }
   }, [mutateEvents]);
 
@@ -83,6 +90,55 @@ export default function AppClient() {
   const cityFilteredEvents = selectedCity
     ? displayEvents.filter((e) => e.city === selectedCity)
     : displayEvents;
+
+  // 点击复制群主微信号
+  const handleCopyWechat = useCallback(async () => {
+    const id = siteConfig?.wechatId;
+    if (!id) return;
+    try {
+      await navigator.clipboard.writeText(id);
+    } catch {
+      // 兼容旧浏览器 / 非安全上下文
+      const ta = document.createElement('textarea');
+      ta.value = id;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch { /* noop */ }
+      document.body.removeChild(ta);
+    }
+    setToast(`✅ 已复制群主微信：${id}`);
+    setTimeout(() => setToast(null), 2500);
+  }, [siteConfig?.wechatId]);
+
+  // 把 banner 按 wechatId 切片，中间插入可点击复制胶囊
+  const renderBanner = useCallback((banner: string, wechatId?: string) => {
+    if (!wechatId || !banner.includes(wechatId)) {
+      return <>{banner}</>;
+    }
+    const parts = banner.split(wechatId);
+    return (
+      <>
+        {parts.map((part, i) => (
+          <span key={i}>
+            {part}
+            {i < parts.length - 1 && (
+              <button
+                type="button"
+                className="promo-wechat"
+                onClick={handleCopyWechat}
+                title="点击复制微信号"
+              >
+                {wechatId}
+                <span className="promo-wechat-copy" aria-hidden>📋</span>
+              </button>
+            )}
+          </span>
+        ))}
+      </>
+    );
+  }, [handleCopyWechat]);
 
   // 统计
   const totalEvents = displayEvents.length;
@@ -95,7 +151,7 @@ export default function AppClient() {
       {siteConfig?.banner && (
         <div className="promo-banner">
           <span className="promo-icon">📣</span>
-          {siteConfig.banner}
+          {renderBanner(siteConfig.banner, siteConfig.wechatId)}
         </div>
       )}
       {/* 顶部标题栏 */}

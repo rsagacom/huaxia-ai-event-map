@@ -19,6 +19,7 @@ services:
       - AI_REVIEW_TIMEOUT=${AI_REVIEW_TIMEOUT:-10000}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - SITE_BANNER=${SITE_BANNER:-}
+      - SITE_WECHAT_ID=${SITE_WECHAT_ID:-}
     volumes:
       - huaxia-data:/data
     restart: unless-stopped

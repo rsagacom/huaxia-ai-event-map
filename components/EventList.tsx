@@ -1,6 +1,7 @@
 'use client';
 // 华夏AI线下活动地图 — 活动列表
 import { useState, type ReactNode } from 'react';
+import dayjs from 'dayjs';
 import type { AIEvent } from '@/lib/types';
 
 interface EventListProps {
@@ -63,6 +64,17 @@ function renderTextWithLinks(text: string): ReactNode[] {
   return nodes;
 }
 
+// 友好展示活动时间：
+//   纯日期 "YYYY-MM-DD"        → "2026年5月20日"
+//   带时间 "YYYY-MM-DDTHH:mm"  → "2026年5月20日 09:00"（T00:00 视为未指定，只显示日期）
+function formatEventDate(raw: string): string {
+  if (!raw) return '';
+  const d = dayjs(raw);
+  if (!d.isValid()) return raw;
+  const withTime = raw.includes('T') && !(d.hour() === 0 && d.minute() === 0);
+  return withTime ? d.format('YYYY年M月D日 HH:mm') : d.format('YYYY年M月D日');
+}
+
 interface Field {
   label: string;
   value: string;
@@ -116,7 +128,7 @@ function EventCard({ evt }: { evt: AIEvent }) {
         <span className="event-card-arrow">{expanded ? '▴' : '▾'}</span>
       </div>
       <div className="event-card-meta">
-        <span className="event-meta-item"><span className="icon">📅</span> {evt.date}</span>
+        <span className="event-meta-item"><span className="icon">📅</span> {formatEventDate(evt.date)}</span>
         <span className="event-meta-item"><span className="icon">📍</span> {evt.city}</span>
       </div>
 
