@@ -162,7 +162,11 @@ async function main() {
     process.stdout.write(`抽取: ${a.title.slice(0, 30)}... `);
     try {
       const { fields, provider } = await extractWithProvider('auto', a.text, timeout);
-      results.push({ title: a.title, url: a.url, provider, ...fields });
+      results.push({
+        title: a.title, url: a.url, provider,
+        benefits: fields.benefits, contact: fields.contact,
+        requirements: fields.requirements, registration: fields.registration,
+      });
       const hasAny = fields.benefits || fields.contact || fields.requirements || fields.registration;
       console.log(`✓ [${provider}] ${hasAny ? '有补充' : '无补充(正文可能无福利)'}`);
     } catch (err) {
