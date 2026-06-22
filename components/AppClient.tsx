@@ -37,9 +37,9 @@ export default function AppClient() {
   const allEvents: AIEvent[] = eventsData?.events ?? [];
   const cities: CityNode[] = citiesData?.cities ?? [];
 
-  // 用日期筛选，倒序排列（最新发布/即将举办排最上）
+  // 用日期筛选，按活动日期由近至远排列（距今天最近的在上，远期在下）
   const displayEvents = filterByDateRange(allEvents, startDate, endDate)
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   // 日期范围变化
   const handleDateRangeChange = useCallback((start: string, end: string) => {

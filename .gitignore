@@ -28,3 +28,7 @@ npm-debug.log*
 # Build
 dist
 *.tsbuildinfo
+
+# 敏感备份
+.env.bak-crlf
+.env.*.bak*

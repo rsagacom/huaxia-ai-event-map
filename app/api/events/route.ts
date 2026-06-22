@@ -14,18 +14,24 @@ export async function GET(request: NextRequest) {
 
   if (city) where.city = city;
 
+  // 默认只展示今天及以后的活动（已结束活动不显示在地图）；
+  // today 用 Asia/Shanghai 时区取 YYYY-MM-DD，SQLite 字符串比较可处理 YYYY-MM-DD[THH:mm]
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Shanghai' });
+
   if (startDate || endDate) {
     // SQLite 字符串比较可以处理 YYYY-MM-DD
     const dateFilter: Record<string, string> = {};
-    if (startDate) dateFilter.gte = startDate;
+    dateFilter.gte = startDate || today;
     if (endDate) dateFilter.lte = endDate;
     where.date = dateFilter;
+  } else {
+    where.date = { gte: today };
   }
 
-  // 按发布时间（createdAt）从新到旧；同发布时间的近期举办在上
+  // 按活动日期由近至远（近期举办在上，远期在下）；同日期按新发布在上
   const events = await prisma.event.findMany({
     where,
-    orderBy: [{ createdAt: 'desc' }, { date: 'desc' }],
+    orderBy: [{ date: 'asc' }, { createdAt: 'desc' }],
     take: 200,
   });
 
