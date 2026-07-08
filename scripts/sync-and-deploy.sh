@@ -4,11 +4,10 @@
 # 用法：bash scripts/sync-and-deploy.sh
 # 定期：cron 每天凌晨 2:00
 #
-# 环境变量：
-#   FEISHU_BOT_WEBHOOK — 飞书机器人 webhook（用于成功/失败通知）
+# 通知：通过 lark-cli → 飞书会话 oc_aea7a0f0bfe06fb063200870e71c8205
 #
 # 前置条件：
-#   - lark-cli 已配置并有 base:record:read 权限
+#   - lark-cli 已登录（lark-cli auth login）
 #   - SSH 密钥可访问 EC2
 set -euo pipefail
 
@@ -21,8 +20,7 @@ EC2_DB="~/huaxia-ai-event-map/prisma/dev.db"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 SQL_FILE="/tmp/huaxia-feishu-sync-${TIMESTAMP}.sql"
 LOG_FILE="/tmp/huaxia-sync-${TIMESTAMP}.log"
-SYNC_COUNT=0
-ERROR_MSG=""
+NOTIFY_CHAT="oc_aea7a0f0bfe06fb063200870e71c8205"
 
 # SSH 密钥：自动探测可用密钥
 if [ -f "$HOME/.ssh/rsaga.pem" ]; then
@@ -34,34 +32,15 @@ else
   exit 1
 fi
 
-# === 飞书 bot 通知 ===
+# === 飞书通知（通过 lark-cli） ===
 feishu_notify() {
-  local title="$1" body="$2" color="${3:-green}"
-  if [ -z "${FEISHU_BOT_WEBHOOK:-}" ]; then
-    echo "[notify] FEISHU_BOT_WEBHOOK 未配置，跳过通知"
-    return
-  fi
-  curl -s -X POST "$FEISHU_BOT_WEBHOOK" \
-    -H "Content-Type: application/json" \
-    -d "$(cat <<EOF
-{
-  "msg_type": "interactive",
-  "card": {
-    "header": {
-      "title": {"tag": "plain_text", "content": "$title"},
-      "template": "$color"
-    },
-    "elements": [
-      {"tag": "markdown", "content": "$body"}
-    ]
-  }
-}
-EOF
-)" > /dev/null 2>&1 || true
+  local text="$1"
+  echo "[notify] $text" | tee -a "$LOG_FILE"
+  lark-cli im +messages-send --chat-id "$NOTIFY_CHAT" --text "$text" > /dev/null 2>&1 || echo "[notify] 发送失败" | tee -a "$LOG_FILE"
 }
 
 # 全局错误捕获
-trap 'feishu_notify "❌ 同步失败" "**时间**: $(date "+%Y-%m-%d %H:%M")\n**错误**: ${ERROR_MSG:-未知错误}\n**日志**: $(tail -20 "$LOG_FILE" 2>/dev/null | sed "s/\"/\\\\\"/g" | paste -sd "\\n" -)" "red"' ERR
+trap 'feishu_notify "❌ 华夏AI同步失败 — $(date "+%m/%d %H:%M")"' ERR
 
 echo "=== 飞书 AI 活动同步 $(date '+%Y-%m-%d %H:%M') === 目标: map.ajw.cn" | tee "$LOG_FILE"
 
@@ -76,7 +55,7 @@ echo "[2/4] 对比生产库，找出增量..." | tee -a "$LOG_FILE"
 LOCAL_IDS=$(sqlite3 prisma/dev.db "SELECT quote(id) FROM Event WHERE date >= date('now') AND reviewReason LIKE '%自动同步%' AND (id LIKE 'evt-fs-row-%' OR id LIKE 'evt-fs-rec%');")
 if [ -z "$LOCAL_IDS" ]; then
   echo "  本地无飞书未来活动" | tee -a "$LOG_FILE"
-  feishu_notify "✅ 同步完成（无新增）" "**时间**: $(date '+%Y-%m-%d %H:%M')\n飞书已拉取，无新增 AI 活动。\n[查看地图](https://map.ajw.cn)" "green"
+  feishu_notify "✅ 华夏AI同步完成 — 无新增活动（$(date '+%m/%d %H:%M')）map.ajw.cn"
   exit 0
 fi
 
@@ -88,7 +67,7 @@ NEW_COUNT=$(echo "$NEW_IDS" | sed '/^$/d' | wc -l | tr -d ' ')
 
 if [ "$NEW_COUNT" -eq 0 ]; then
   echo "✅ 没有新增活动，生产已是最新" | tee -a "$LOG_FILE"
-  feishu_notify "✅ 同步完成（已最新）" "**时间**: $(date '+%Y-%m-%d %H:%M')\n飞书已拉取，生产环境已是最新。\n[查看地图](https://map.ajw.cn)" "green"
+  feishu_notify "✅ 华夏AI同步完成 — 生产已是最新（$(date '+%m/%d %H:%M')）map.ajw.cn"
   exit 0
 fi
 
@@ -133,6 +112,6 @@ TITLE_PREVIEW=$(echo "$NEW_TITLES" | sed 's/"/\\"/g' | paste -sd '\n' -)
 
 echo "=== 同步完成：新增 ${NEW_COUNT} 条 AI 活动 → map.ajw.cn ===" | tee -a "$LOG_FILE"
 
-feishu_notify "✅ 同步成功" "**时间**: $(date '+%Y-%m-%d %H:%M')\n**新增**: ${NEW_COUNT} 条 AI 活动\n**生产**: map.ajw.cn (${VERIFY} 条)\n\n${TITLE_PREVIEW}\n\n[查看地图](https://map.ajw.cn)" "green"
+feishu_notify "✅ 华夏AI同步成功 — 新增 ${NEW_COUNT} 条活动 → map.ajw.cn（${VERIFY} 条）"
 
 rm "$SQL_FILE"
