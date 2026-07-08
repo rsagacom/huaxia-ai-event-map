@@ -20,7 +20,7 @@ EC2_DB="~/huaxia-ai-event-map/prisma/dev.db"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 SQL_FILE="/tmp/huaxia-feishu-sync-${TIMESTAMP}.sql"
 LOG_FILE="/tmp/huaxia-sync-${TIMESTAMP}.log"
-NOTIFY_CHAT="oc_aea7a0f0bfe06fb063200870e71c8205"
+NOTIFY_FILE="/tmp/huaxia-sync-notify.txt"
 
 # SSH 密钥：自动探测可用密钥
 if [ -f "$HOME/.ssh/rsaga.pem" ]; then
@@ -32,11 +32,11 @@ else
   exit 1
 fi
 
-# === 飞书通知（通过 lark-cli） ===
+# === 飞书通知（写入文件，早上 9:00 cron 统一发送） ===
 feishu_notify() {
   local text="$1"
   echo "[notify] $text" | tee -a "$LOG_FILE"
-  lark-cli im +messages-send --chat-id "$NOTIFY_CHAT" --text "$text" > /dev/null 2>&1 || echo "[notify] 发送失败" | tee -a "$LOG_FILE"
+  echo "$text" >> "$NOTIFY_FILE"
 }
 
 # 全局错误捕获
