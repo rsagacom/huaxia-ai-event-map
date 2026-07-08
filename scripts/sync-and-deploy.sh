@@ -2,20 +2,32 @@
 # 飞书活动 → 华夏AI活动地图 自动同步脚本
 #
 # 用法：bash scripts/sync-and-deploy.sh
-# 定期：建议每周一早上 9 点执行（cron: 0 9 * * 1）
+# 定期：cron 每 2 天凌晨 2:00 执行
 #
 # 前置条件：
 #   - lark-cli 已配置并有 base:record:read 权限
-#   - SSH 密钥 ~/Downloads/rsaga.pem 可访问 EC2
+#   - SSH 密钥可访问 EC2
 #   - 本地项目路径: /Volumes/AJW-Data/Projects/huaxia-ai-event-map
 set -euo pipefail
 
+# === 环境加固：cron 环境下 PATH 可能缺失 Homebrew ===
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
 PROJECT_DIR="/Volumes/AJW-Data/Projects/huaxia-ai-event-map"
 EC2_HOST="ec2-user@71.136.99.134"
-EC2_KEY="$HOME/Downloads/rsaga.pem"
 EC2_DB="~/huaxia-ai-event-map/prisma/dev.db"
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 SQL_FILE="/tmp/huaxia-feishu-sync-${TIMESTAMP}.sql"
+
+# SSH 密钥：自动探测可用密钥
+if [ -f "$HOME/.ssh/rsaga.pem" ]; then
+  EC2_KEY="$HOME/.ssh/rsaga.pem"
+elif [ -f "$HOME/Downloads/rsaga.pem" ]; then
+  EC2_KEY="$HOME/Downloads/rsaga.pem"
+else
+  echo "❌ 错误: SSH 密钥未找到 (~/.ssh/rsaga.pem 或 ~/Downloads/rsaga.pem)"
+  exit 1
+fi
 
 echo "=== 飞书活动同步 $(date '+%Y-%m-%d %H:%M') ==="
 
@@ -26,13 +38,13 @@ npx tsx scripts/sync-feishu.ts 2>&1 | tail -5
 
 # 2. 导出本地未来活动 ID，对比生产库找出真正增量
 echo "[2/4] 对比生产库，找出增量..."
-LOCAL_IDS=$(sqlite3 prisma/dev.db "SELECT quote(id) FROM Event WHERE date >= date('now') AND reviewReason LIKE '%自动同步%' AND id LIKE 'evt-fs-row-%';")
+LOCAL_IDS=$(sqlite3 prisma/dev.db "SELECT quote(id) FROM Event WHERE date >= date('now') AND reviewReason LIKE '%自动同步%' AND (id LIKE 'evt-fs-row-%' OR id LIKE 'evt-fs-rec%');")
 if [ -z "$LOCAL_IDS" ]; then
   echo "  本地无飞书未来活动"
   exit 0
 fi
 
-PROD_IDS=$(ssh -i "$EC2_KEY" "$EC2_HOST" "sqlite3 ${EC2_DB} 'SELECT quote(id) FROM Event WHERE id LIKE \"evt-fs-row-%\";'" 2>/dev/null || echo "")
+PROD_IDS=$(ssh -i "$EC2_KEY" "$EC2_HOST" "sqlite3 ${EC2_DB} 'SELECT quote(id) FROM Event WHERE id LIKE \"evt-fs-row-%\" OR id LIKE \"evt-fs-rec%\";'" 2>/dev/null || echo "")
 
 # 找出仅在本地存在、不在生产的 ID
 NEW_IDS=$(comm -23 <(echo "$LOCAL_IDS" | sort) <(echo "$PROD_IDS" | sort))

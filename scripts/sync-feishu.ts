@@ -243,6 +243,8 @@ async function main() {
   // 4. 输出增量
   const sqlStatements: string[] = [];
   let skippedCities = 0;
+  let successCount = 0;
+  let upsertFailures = 0;
   for (const e of newEvents) {
     const venue = (e.venue && e.venue.trim()) || e.city || '待定';
     const reqParts = [
@@ -286,11 +288,17 @@ async function main() {
       const sql = `INSERT OR IGNORE INTO Event (id, title, date, city, venue, registration, benefits, requirements, contact, status, reviewReason, reviewedBy, reviewedAt, createdAt) VALUES (${esc(data.id)}, ${esc(data.title)}, ${esc(data.date)}, ${esc(data.city)}, ${esc(data.venue)}, ${esc(data.registration)}, ${esc(data.benefits)}, ${esc(data.requirements)}, ${esc(data.contact)}, ${esc(data.status)}, ${esc(data.reviewReason)}, ${esc(data.reviewedBy)}, ${esc(data.reviewedAt)}, ${esc(data.createdAt)});`;
       sqlStatements.push(sql);
     } else {
-      await prisma.event.upsert({
-        where: { id: data.id },
-        create: data,
-        update: data, // 同一条飞书记录再次同步时，用最新数据覆盖
-      });
+      try {
+        await prisma.event.upsert({
+          where: { id: data.id },
+          create: data,
+          update: data, // 同一条飞书记录再次同步时，用最新数据覆盖
+        });
+        successCount++;
+      } catch (upsertErr: any) {
+        console.error(`❌ FAIL [${e.city}] ${e.title}: ${upsertErr.message}`);
+        upsertFailures++;
+      }
     }
   }
 
@@ -301,10 +309,11 @@ async function main() {
     // 也输出到 stdout 方便管道
     console.log(sqlStatements.join('\n'));
   } else if (!DRY) {
-    console.error(`\n=== 入库 ${newEvents.length} 条 ===`);
+    console.error(`\n=== 入库完成: 成功 ${successCount}/${newEvents.length} 条${upsertFailures > 0 ? `, 失败 ${upsertFailures}` : ''} ===`);
   }
 
   if (skippedCities > 0) console.error(`[skip] 跳过不存在城市 ${skippedCities} 条`);
+  if (upsertFailures > 0) console.error(`[error] 入库异常 ${upsertFailures} 条（请检查上方 ❌ FAIL 日志）`);
   if (DRY) console.error('\n(dry-run 未写库)');
 
   // 5. 输出生产导入提示
