@@ -70,7 +70,7 @@ function _pickCity(s: string): string | null {
 function normCity(raw: string | string[] | null): string | null {
   if (!raw) return null;
   const s = (Array.isArray(raw) ? raw.join('；') : raw)
-    .replace(/[🔴🟡🟢🔵🟣⚪️🇸🇬🇭🇰🌍]/gu, '')
+    .replace(/[🔴🟡🟢🔵🟣🟤⚪️🇸🇬🇭🇰🌍]/gu, '')
     .trim();
   if (s in CITY_MAP) return CITY_MAP[s];
   // 多城市时按优先级选择
