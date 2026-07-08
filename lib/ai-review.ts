@@ -49,8 +49,11 @@ export function getProviders(): Record<string, AIProvider> {
       name: 'Step (阶跃)',
       baseURL: process.env.STEP_BASE_URL || 'https://api.stepfun.com/v1',
       apiKey: process.env.STEP_API_KEY || '',
-      model: 'step-1-8k',
-      multimodal: false,
+      // 默认多模态模型 step-1o-turbo-vision：既能识图又能文本审核（1.5s 最快）。
+      // MiniCPM 免费 key 2026-06-24 失效后，step 作为唯一可用多模态 provider。
+      // 可用 STEP_MODEL 覆盖（如 step-1-8k 纯文本更省，但不能识图）。
+      model: process.env.STEP_MODEL || 'step-1o-turbo-vision',
+      multimodal: process.env.STEP_MODEL ? false : true,
     },
   };
 }

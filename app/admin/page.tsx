@@ -2,7 +2,7 @@
 // 华夏AI线下活动地图 — 人工审核后台
 import { useState, useCallback } from 'react';
 import useSWR from 'swr';
-import type { AIEvent } from '@/lib/types';
+import type { AIEvent, EventFormData, CityNode } from '@/lib/types';
 
 type Tab = 'review' | 'published';
 
@@ -14,6 +14,26 @@ function fmtTime(iso?: string | null): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
+// 内联编辑表单的统一样式
+const editLabelStyle: React.CSSProperties = {
+  display: 'block',
+  color: '#8899b0',
+  fontSize: 12,
+  marginBottom: 4,
+};
+const editInputStyle: React.CSSProperties = {
+  width: '100%',
+  background: '#0f1628',
+  border: '1px solid #1e3a5f',
+  color: '#e0e6f0',
+  padding: '8px 12px',
+  borderRadius: 6,
+  fontSize: 13,
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontFamily: 'inherit',
+};
 
 export default function AdminPage() {
   const [password, setPassword] = useState('');
@@ -86,6 +106,11 @@ export default function AdminPage() {
   const { data: pubData, mutate: mutatePub } = useSWR(loggedIn ? '/api/admin/events?status=approved' : null, fetcher, { refreshInterval: 15000 });
   // SWR: 配置
   const { data: config } = useSWR(loggedIn ? '/api/admin/review-config' : null, fetcher);
+  // SWR: 城市列表（编辑表单的城市下拉用，避免外键失败）
+  const { data: citiesData } = useSWR<{ cities: CityNode[] }>(loggedIn ? '/api/cities' : null, (url: string) =>
+    fetch(url).then((r) => r.json()),
+  );
+  const cities: CityNode[] = citiesData?.cities ?? [];
 
   const reviewEvents: AIEvent[] = data?.events ?? [];
   const publishedEvents: AIEvent[] = pubData?.events ?? [];
@@ -94,6 +119,67 @@ export default function AdminPage() {
     setMessage(msg);
     setTimeout(() => setMessage(null), 3000);
   }, []);
+
+  // 已发布管理：内联编辑状态
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EventFormData | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  const startEdit = useCallback((evt: AIEvent) => {
+    setEditingId(evt.id);
+    setEditError('');
+    setEditForm({
+      title: evt.title,
+      date: evt.date && evt.date.length === 10 ? `${evt.date}T00:00` : evt.date,
+      city: evt.city,
+      venue: evt.venue,
+      registration: evt.registration,
+      benefits: evt.benefits,
+      requirements: evt.requirements,
+      contact: evt.contact,
+    });
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setEditForm(null);
+    setEditError('');
+  }, []);
+
+  const handleEditField = useCallback((field: keyof EventFormData, value: string) => {
+    setEditForm((prev) => (prev ? { ...prev, [field]: value } : prev));
+  }, []);
+
+  const saveEdit = useCallback(async (id: string) => {
+    if (!editForm) return;
+    if (!editForm.title.trim() || !editForm.date.trim() || !editForm.city.trim() || !editForm.venue.trim()) {
+      setEditError('活动主题、时间、城市、详细地址 不能为空');
+      return;
+    }
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const res = await fetch(`/api/admin/events/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify(editForm),
+      });
+      if (res.status === 401) { setLoggedIn(false); setToken(''); return; }
+      if (res.ok) {
+        await mutatePub();
+        flash('✅ 已保存修改');
+        cancelEdit();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setEditError(d.error || '保存失败');
+      }
+    } catch {
+      setEditError('网络错误');
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editForm, token, mutatePub, flash, cancelEdit]);
 
   const handleAction = useCallback(async (id: string, action: 'approve' | 'reject') => {
     const res = await fetch(`/api/admin/events/${id}/${action}`, {
@@ -256,8 +342,10 @@ export default function AdminPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {publishedEvents.map((evt) => (
-              <div key={evt.id} style={{ background: '#111827', border: '1px solid #1e3a5f', borderRadius: 8, padding: 16 }}>
+            {publishedEvents.map((evt) => {
+              const isEditing = editingId === evt.id;
+              return (
+              <div key={evt.id} style={{ background: '#111827', border: `1px solid ${isEditing ? '#00e5ff' : '#1e3a5f'}`, borderRadius: 8, padding: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -269,6 +357,9 @@ export default function AdminPage() {
                     <div style={{ color: '#556680', fontSize: 11, marginTop: 4 }}>发布时间: {fmtTime(evt.createdAt)}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginLeft: 16, flexShrink: 0 }}>
+                    <button onClick={() => startEdit(evt)} title="编辑字段信息" style={{ background: 'rgba(0,229,255,0.12)', border: '1px solid #00e5ff', color: '#00e5ff', padding: '6px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>
+                      ✏️ 编辑
+                    </button>
                     <button onClick={() => handleAction(evt.id, 'reject')} title="撤下（改回已拒绝）" style={{ background: 'rgba(255,152,0,0.15)', border: '1px solid #ff9800', color: '#ff9800', padding: '6px 14px', borderRadius: 4, cursor: 'pointer', fontSize: 12 }}>
                       ⏸️ 撤下
                     </button>
@@ -277,8 +368,59 @@ export default function AdminPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* 内联编辑表单：人工补充/修正字段 */}
+                {isEditing && editForm && (
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px dashed #1e3a5f', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div>
+                      <label style={editLabelStyle}>活动主题 *</label>
+                      <input style={editInputStyle} type="text" value={editForm.title} onChange={(e) => handleEditField('title', e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={editLabelStyle}>活动时间 *</label>
+                      <input style={editInputStyle} type="datetime-local" value={editForm.date} onChange={(e) => handleEditField('date', e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={editLabelStyle}>城市 *</label>
+                      <select style={editInputStyle} value={editForm.city} onChange={(e) => handleEditField('city', e.target.value)}>
+                        <option value="">选择城市</option>
+                        {cities.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={editLabelStyle}>详细地址 *</label>
+                      <input style={editInputStyle} type="text" value={editForm.venue} onChange={(e) => handleEditField('venue', e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={editLabelStyle}>报名方式</label>
+                      <input style={editInputStyle} type="text" value={editForm.registration} onChange={(e) => handleEditField('registration', e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={editLabelStyle}>活动福利</label>
+                      <textarea style={{ ...editInputStyle, minHeight: 60, resize: 'vertical' }} value={editForm.benefits} onChange={(e) => handleEditField('benefits', e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={editLabelStyle}>参加要求</label>
+                      <textarea style={{ ...editInputStyle, minHeight: 60, resize: 'vertical' }} value={editForm.requirements} onChange={(e) => handleEditField('requirements', e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={editLabelStyle}>联系方式</label>
+                      <input style={editInputStyle} type="text" value={editForm.contact} onChange={(e) => handleEditField('contact', e.target.value)} />
+                    </div>
+                    {editError && <div style={{ color: '#ff5252', fontSize: 12 }}>{editError}</div>}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => saveEdit(evt.id)} disabled={editSaving} style={{ background: 'linear-gradient(135deg, #00e5ff, #2196f3)', color: '#000', border: 'none', padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: editSaving ? 'not-allowed' : 'pointer' }}>
+                        {editSaving ? '保存中…' : '💾 保存修改'}
+                      </button>
+                      <button onClick={cancelEdit} style={{ background: '#0f1628', border: '1px solid #1e3a5f', color: '#8899b0', padding: '8px 20px', borderRadius: 6, fontSize: 13, cursor: 'pointer' }}>
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )
       )}
